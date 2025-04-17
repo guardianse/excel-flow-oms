@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileCheck, FilePlus, FileX } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 type Status = "success" | "failed" | "pending";
 
@@ -83,14 +84,19 @@ function getStatusBadgeStyle(status: Status) {
 export function RecentUploads() {
   return (
     <Card className="animate-enter">
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Recent Uploads</CardTitle>
+        <Button variant="outline" size="sm">View All</Button>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {recentUploads.map((upload) => (
-            <div key={upload.id} className="flex items-center gap-4">
-              <div className="bg-muted p-2 rounded">
+          {recentUploads.map((upload, index) => (
+            <div 
+              key={upload.id} 
+              className="flex items-center gap-4 animate-enter" 
+              style={{ animationDelay: `${index * 100}ms` }}
+            >
+              <div className="bg-muted/70 p-2 rounded">
                 {getStatusIcon(upload.status)}
               </div>
               <div className="flex-1 space-y-1">
@@ -105,7 +111,9 @@ export function RecentUploads() {
                 <Badge variant="outline" className={cn(getStatusBadgeStyle(upload.status))}>
                   {upload.status}
                 </Badge>
-                <Badge variant="secondary">
+                <Badge variant="secondary" className={cn(
+                  upload.type === "inbound" ? "bg-blue-500/10 text-blue-600" : "bg-purple-500/10 text-purple-600"
+                )}>
                   {upload.type}
                 </Badge>
               </div>

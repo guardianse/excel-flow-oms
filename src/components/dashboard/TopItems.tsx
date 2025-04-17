@@ -1,6 +1,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Package } from "lucide-react";
 
 const topItems = [
   {
@@ -37,19 +38,27 @@ const topItems = [
 
 export function TopItems() {
   return (
-    <Card className="animate-enter">
-      <CardHeader>
+    <Card className="animate-enter h-full">
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Top Items by Volume</CardTitle>
+        <Package className="h-5 w-5 text-muted-foreground" />
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {topItems.map((item) => (
-            <div key={item.id} className="space-y-2">
+        <div className="space-y-5">
+          {topItems.map((item, index) => (
+            <div 
+              key={item.id} 
+              className="space-y-2 animate-enter" 
+              style={{ animationDelay: `${index * 100}ms` }}
+            >
               <div className="flex items-center justify-between font-medium">
-                <span>{item.name} <span className="font-normal text-muted-foreground">({item.id})</span></span>
-                <span>{item.quantity} units</span>
+                <span>{item.name} <span className="font-normal text-muted-foreground text-xs">({item.id})</span></span>
+                <span className="font-mono">{item.quantity.toLocaleString()}</span>
               </div>
-              <Progress value={item.percentageOfTotal} className="h-2" />
+              <div className="relative pt-1">
+                <Progress value={item.percentageOfTotal} className="h-2" />
+                <span className="absolute right-0 -top-1 text-xs text-muted-foreground">{item.percentageOfTotal}%</span>
+              </div>
             </div>
           ))}
         </div>
