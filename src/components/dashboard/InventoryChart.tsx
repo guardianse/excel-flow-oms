@@ -62,7 +62,7 @@ export function InventoryChart() {
               fill="hsl(var(--accent-foreground) / 0.8)" 
               radius={[4, 4, 0, 0]} 
               animationDuration={1200}
-              animationDelay={300}
+              // Removed the invalid animationDelay property
             />
           </BarChart>
         </ResponsiveContainer>
