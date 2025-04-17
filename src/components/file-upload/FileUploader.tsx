@@ -1,10 +1,11 @@
 
 import { useState } from "react";
-import { FileSpreadsheet, Upload, X } from "lucide-react";
+import { FileSpreadsheet, Upload, X, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface FileUploaderProps {
   title: string;
@@ -27,6 +28,7 @@ export function FileUploader({
   const [isDragging, setIsDragging] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const { toast } = useToast();
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -42,6 +44,7 @@ export function FileUploader({
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(false);
+    setValidationErrors([]);
 
     const droppedFile = e.dataTransfer.files[0];
     if (validateFile(droppedFile)) {
@@ -50,6 +53,7 @@ export function FileUploader({
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setValidationErrors([]);
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
       if (validateFile(selectedFile)) {
@@ -59,23 +63,32 @@ export function FileUploader({
   };
 
   const validateFile = (file: File) => {
+    const errors: string[] = [];
+    
+    // Check file extension
     const validExtensions = [".xlsx", ".xls"];
     const fileExt = "." + file.name.split(".").pop()?.toLowerCase();
     
     if (!validExtensions.includes(fileExt)) {
-      toast({
-        variant: "destructive",
-        title: "Invalid file format",
-        description: "Please upload an Excel file (.xlsx or .xls)",
-      });
-      return false;
+      errors.push("Invalid file format. Please upload an Excel file (.xlsx or .xls)");
     }
     
+    // Check file size
     if (file.size > 10 * 1024 * 1024) { // 10MB limit
+      errors.push("File size exceeds the 10MB limit");
+    }
+    
+    // Check file name length
+    if (file.name.length > 100) {
+      errors.push("File name is too long (maximum 100 characters)");
+    }
+    
+    if (errors.length > 0) {
+      setValidationErrors(errors);
       toast({
         variant: "destructive",
-        title: "File too large",
-        description: "Please upload a file smaller than 10MB",
+        title: "Validation failed",
+        description: errors[0],
       });
       return false;
     }
@@ -86,6 +99,7 @@ export function FileUploader({
   const removeFile = () => {
     setFile(null);
     setUploadProgress(0);
+    setValidationErrors([]);
   };
 
   const handleUpload = () => {
@@ -93,6 +107,7 @@ export function FileUploader({
     
     setIsUploading(true);
     setUploadProgress(0);
+    setValidationErrors([]);
     
     // Simulate file processing with progress
     const interval = setInterval(() => {
@@ -125,14 +140,20 @@ export function FileUploader({
               onUploadSuccess(mockData);
               setFile(null);
             } else {
-              // Simulated error
+              // Simulated error with more specific details
+              const mockError = fileType === "inbound" 
+                ? "Validation failed for row 3: Missing required SKU and quantity fields" 
+                : "Validation failed for row 5: Quantity exceeds available stock";
+              
+              setValidationErrors([mockError]);
+              
               toast({
                 variant: "destructive",
                 title: "Processing error",
                 description: "There was an error with some items in your file.",
               });
               
-              onUploadError("Validation failed for row 3: Missing required SKU");
+              onUploadError(mockError);
             }
           }, 500);
         }
@@ -148,6 +169,7 @@ export function FileUploader({
       description: `The ${fileType} template has been downloaded.`,
     });
     // In a real app, this would trigger a file download
+    window.open(templateUrl, '_blank');
   };
 
   return (
@@ -164,6 +186,19 @@ export function FileUploader({
               Download Template
             </Button>
           </div>
+          
+          {validationErrors.length > 0 && (
+            <Alert variant="destructive" className="animate-enter">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                <div className="mt-1">
+                  {validationErrors.map((error, index) => (
+                    <p key={index} className="text-sm">{error}</p>
+                  ))}
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
           
           {!file ? (
             <div

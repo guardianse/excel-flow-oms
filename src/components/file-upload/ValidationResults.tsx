@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, CheckCircle, XCircle } from "lucide-react";
+import { AlertCircle, CheckCircle, XCircle, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ValidationErrorProps {
@@ -44,6 +44,30 @@ export function ValidationResults({
   if (!results.data && !results.error) {
     return null;
   }
+
+  const handleExportData = () => {
+    // In a real application, this would generate and download a CSV/Excel file
+    // For now, we'll just show a console message
+    console.log("Exporting data:", results.data);
+    
+    // Create a CSV string (simplified example)
+    if (results.data && results.data.length > 0) {
+      const headers = Object.keys(results.data[0]).join(',');
+      const rows = results.data.map(item => Object.values(item).join(','));
+      const csvContent = [headers, ...rows].join('\n');
+      
+      // Create a downloadable blob
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${type}_data_export_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  };
   
   return (
     <Card className="mt-6 border-l-4 animate-enter" 
@@ -73,14 +97,27 @@ export function ValidationResults({
           <div className="mt-4">
             <div className="flex items-center justify-between mb-2">
               <h4 className="font-medium">Data Preview</h4>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setExpanded(!expanded)}
-                className="text-xs h-7"
-              >
-                {expanded ? "Show less" : "Show more"}
-              </Button>
+              <div className="flex items-center gap-2">
+                {results.success && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="text-xs h-7 flex items-center gap-1"
+                    onClick={handleExportData}
+                  >
+                    <Download className="h-3 w-3" />
+                    Export
+                  </Button>
+                )}
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setExpanded(!expanded)}
+                  className="text-xs h-7"
+                >
+                  {expanded ? "Show less" : "Show more"}
+                </Button>
+              </div>
             </div>
             <div className="border rounded-md overflow-x-auto">
               <table className="w-full text-sm">
@@ -97,14 +134,21 @@ export function ValidationResults({
                 </thead>
                 <tbody>
                   {results.data.slice(0, expanded ? undefined : 3).map((item, index) => (
-                    <tr key={index} className="border-t">
+                    <tr key={index} className={cn(
+                      "border-t",
+                      index % 2 === 0 ? "bg-white" : "bg-muted/20"
+                    )}>
                       <td className="p-2">{item.sku}</td>
                       <td className="p-2">{item.name}</td>
                       <td className="p-2">{item.quantity}</td>
                       <td className="p-2">{type === "inbound" ? item.source : item.destination || item.source}</td>
                       <td className="p-2">
                         <Badge variant="outline" className={cn(
-                          "bg-primary/10 text-primary hover:bg-primary/20 border-primary/20"
+                          item.status === "Processed" 
+                            ? "bg-primary/10 text-primary hover:bg-primary/20 border-primary/20"
+                            : item.status === "Warning"
+                            ? "bg-yellow-500/10 text-yellow-600 hover:bg-yellow-500/20 border-yellow-500/20"
+                            : "bg-gray-500/10 text-gray-600 hover:bg-gray-500/20 border-gray-500/20"
                         )}>
                           {item.status}
                         </Badge>
@@ -127,7 +171,8 @@ export function ValidationResults({
             {results.success ? "Cancel" : "Try Again"}
           </Button>
           {results.success && (
-            <Button onClick={onConfirm}>
+            <Button onClick={onConfirm} className="flex items-center gap-1">
+              <CheckCircle className="h-4 w-4" />
               Confirm & Save
             </Button>
           )}
