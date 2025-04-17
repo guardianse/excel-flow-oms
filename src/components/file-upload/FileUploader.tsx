@@ -1,11 +1,13 @@
 
 import { useState } from "react";
-import { FileSpreadsheet, Upload, X, AlertTriangle } from "lucide-react";
+import { FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
-import { Progress } from "@/components/ui/progress";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { validateFile } from "./utils/file-validation";
+import { DropZone } from "./DropZone";
+import { FilePreview } from "./FilePreview";
+import { ValidationErrors } from "./ValidationErrors";
 
 interface FileUploaderProps {
   title: string;
@@ -25,75 +27,25 @@ export function FileUploader({
   templateUrl,
 }: FileUploaderProps) {
   const [file, setFile] = useState<File | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const { toast } = useToast();
 
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragging(false);
+  const handleFileDrop = (selectedFile: File) => {
     setValidationErrors([]);
-
-    const droppedFile = e.dataTransfer.files[0];
-    if (validateFile(droppedFile)) {
-      setFile(droppedFile);
-    }
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setValidationErrors([]);
-    if (e.target.files && e.target.files[0]) {
-      const selectedFile = e.target.files[0];
-      if (validateFile(selectedFile)) {
-        setFile(selectedFile);
-      }
-    }
-  };
-
-  const validateFile = (file: File) => {
-    const errors: string[] = [];
+    const validation = validateFile(selectedFile);
     
-    // Check file extension
-    const validExtensions = [".xlsx", ".xls"];
-    const fileExt = "." + file.name.split(".").pop()?.toLowerCase();
-    
-    if (!validExtensions.includes(fileExt)) {
-      errors.push("Invalid file format. Please upload an Excel file (.xlsx or .xls)");
-    }
-    
-    // Check file size
-    if (file.size > 10 * 1024 * 1024) { // 10MB limit
-      errors.push("File size exceeds the 10MB limit");
-    }
-    
-    // Check file name length
-    if (file.name.length > 100) {
-      errors.push("File name is too long (maximum 100 characters)");
-    }
-    
-    if (errors.length > 0) {
-      setValidationErrors(errors);
+    if (validation.isValid) {
+      setFile(selectedFile);
+    } else {
+      setValidationErrors(validation.errors);
       toast({
         variant: "destructive",
         title: "Validation failed",
-        description: errors[0],
+        description: validation.errors[0],
       });
-      return false;
     }
-    
-    return true;
   };
 
   const removeFile = () => {
@@ -187,79 +139,18 @@ export function FileUploader({
             </Button>
           </div>
           
-          {validationErrors.length > 0 && (
-            <Alert variant="destructive" className="animate-enter">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                <div className="mt-1">
-                  {validationErrors.map((error, index) => (
-                    <p key={index} className="text-sm">{error}</p>
-                  ))}
-                </div>
-              </AlertDescription>
-            </Alert>
-          )}
+          <ValidationErrors errors={validationErrors} />
           
           {!file ? (
-            <div
-              className={`border-2 border-dashed rounded-lg p-8 text-center hover:bg-muted/50 transition-colors ${
-                isDragging ? "border-primary bg-primary/10" : "border-muted-foreground/25"
-              }`}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-            >
-              <Upload className="w-10 h-10 mx-auto text-muted-foreground" />
-              <h4 className="text-base font-medium mt-4">Drag and drop your Excel file</h4>
-              <p className="text-sm text-muted-foreground mt-1">or click to browse</p>
-              <input
-                type="file"
-                id={`file-upload-${fileType}`}
-                className="hidden"
-                accept=".xlsx,.xls"
-                onChange={handleFileChange}
-              />
-              <Button
-                variant="secondary"
-                className="mt-4"
-                onClick={() => document.getElementById(`file-upload-${fileType}`)?.click()}
-              >
-                Select File
-              </Button>
-            </div>
+            <DropZone onFileDrop={handleFileDrop} fileType={fileType} />
           ) : (
-            <div className="border rounded-lg p-4">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center">
-                  <FileSpreadsheet className="w-8 h-8 mr-3 text-primary" />
-                  <div>
-                    <p className="font-medium">{file.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {(file.size / 1024).toFixed(1)} KB • Excel File
-                    </p>
-                  </div>
-                </div>
-                {!isUploading && (
-                  <Button variant="ghost" size="icon" onClick={removeFile}>
-                    <X className="w-4 h-4" />
-                  </Button>
-                )}
-              </div>
-              
-              {isUploading ? (
-                <div className="space-y-2">
-                  <Progress value={uploadProgress} className="h-2" />
-                  <p className="text-xs text-right text-muted-foreground">
-                    {uploadProgress}% - Processing file...
-                  </p>
-                </div>
-              ) : (
-                <Button onClick={handleUpload} className="w-full">
-                  <Upload className="w-4 h-4 mr-2" />
-                  Upload and Process
-                </Button>
-              )}
-            </div>
+            <FilePreview 
+              file={file}
+              onRemove={removeFile}
+              onUpload={handleUpload}
+              isUploading={isUploading}
+              uploadProgress={uploadProgress}
+            />
           )}
         </div>
       </CardContent>
