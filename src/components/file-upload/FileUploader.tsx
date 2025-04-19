@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,6 +7,8 @@ import { validateFile } from "./utils/file-validation";
 import { DropZone } from "./DropZone";
 import { FilePreview } from "./FilePreview";
 import { ValidationErrors } from "./ValidationErrors";
+import { generateOutboundTemplate } from "./utils/template-download";
+import { generateMockOutboundData } from "./utils/mock-data";
 
 interface FileUploaderProps {
   title: string;
@@ -24,7 +25,6 @@ export function FileUploader({
   onUploadSuccess,
   onUploadError,
   fileType,
-  templateUrl,
 }: FileUploaderProps) {
   const [file, setFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -61,29 +61,18 @@ export function FileUploader({
     setUploadProgress(0);
     setValidationErrors([]);
     
-    // Simulate file processing with progress
     const interval = setInterval(() => {
       setUploadProgress(prev => {
         const newProgress = prev + 10;
         if (newProgress >= 100) {
           clearInterval(interval);
           
-          // Mock data processing
           setTimeout(() => {
             setIsUploading(false);
             
-            // Generate mock data based on file type
+            const mockData = generateMockOutboundData(5);
+            
             if (Math.random() > 0.2) { // 80% success chance
-              const mockData = Array(10).fill(0).map((_, i) => ({
-                id: `ITEM-${i + 100}`,
-                sku: `SKU-${1000 + i}`,
-                name: `Product ${i + 1}`,
-                quantity: Math.floor(Math.random() * 100) + 10,
-                date: new Date().toISOString().split('T')[0],
-                source: fileType === "inbound" ? "Vendor A" : "Store 5",
-                status: "Processed",
-              }));
-              
               toast({
                 title: "Upload successful",
                 description: `${file.name} has been processed.`,
@@ -92,11 +81,7 @@ export function FileUploader({
               onUploadSuccess(mockData);
               setFile(null);
             } else {
-              // Simulated error with more specific details
-              const mockError = fileType === "inbound" 
-                ? "Validation failed for row 3: Missing required SKU and quantity fields" 
-                : "Validation failed for row 5: Quantity exceeds available stock";
-              
+              const mockError = "Validation failed: Missing required fields in row 3";
               setValidationErrors([mockError]);
               
               toast({
@@ -116,12 +101,11 @@ export function FileUploader({
   };
 
   const downloadTemplate = () => {
+    generateOutboundTemplate();
     toast({
       title: "Template downloaded",
-      description: `The ${fileType} template has been downloaded.`,
+      description: `The outbound template has been downloaded.`,
     });
-    // In a real app, this would trigger a file download
-    window.open(templateUrl, '_blank');
   };
 
   return (
